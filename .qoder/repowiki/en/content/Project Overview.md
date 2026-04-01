@@ -18,7 +18,6 @@
 </cite>
 
 ## Table of Contents
-
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
@@ -37,16 +36,13 @@ iteration, and export. Users can select from multiple AI agents, chat with them 
 AI-generated XML that renders live in the Draw.io editor, and export the final artwork.
 
 Key value propositions:
-
 - AI-assisted ideation and refinement of diagrams via natural language
 - Real-time collaborative editing powered by Draw.io’s embed mode
 - Seamless authentication and session management for personalized experiences
 - Straightforward export to SVG for high-quality visuals suitable for documentation and presentations
 
 ## Project Structure
-
 The application follows Next.js App Router conventions with a minimal, focused structure:
-
 - Root layout and global styles define the theme and typography
 - A landing page for login and a main studio page for diagramming
 - API service layer for backend communication
@@ -86,7 +82,6 @@ PC --> G
 ```
 
 **Diagram sources**
-
 - [src/app/layout.tsx:1-34](file://src/app/layout.tsx#L1-L34)
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
@@ -98,7 +93,6 @@ PC --> G
 - [postcss.config.mjs:1-8](file://postcss.config.mjs#L1-L8)
 
 **Section sources**
-
 - [README.md:1-37](file://README.md#L1-L37)
 - [package.json:1-28](file://package.json#L1-L28)
 - [next.config.ts:1-8](file://next.config.ts#L1-L8)
@@ -107,23 +101,21 @@ PC --> G
 - [src/app/globals.css:1-27](file://src/app/globals.css#L1-L27)
 
 ## Core Components
-
 - Authentication and session management:
-    - Cookie-based login with a dedicated payload stored in a cookie
-    - Automatic redirect to login when unauthenticated
-    - Timestamped login info for user visibility
+  - Cookie-based login with a dedicated payload stored in a cookie
+  - Automatic redirect to login when unauthenticated
+  - Timestamped login info for user visibility
 - AI agent integration:
-    - Dynamic agent list loading
-    - Session creation per agent and user
-    - Non-streaming chat with JSON-parsed responses that can carry either plain text or Draw.io XML
+  - Dynamic agent list loading
+  - Session creation per agent and user
+  - Non-streaming chat with JSON-parsed responses that can carry either plain text or Draw.io XML
 - Real-time diagram editing:
-    - Draw.io embedded editor with dark UI and library support
-    - Live XML updates and programmatic export
+  - Draw.io embedded editor with dark UI and library support
+  - Live XML updates and programmatic export
 - Export capabilities:
-    - SVG export with preview modal and download action
+  - SVG export with preview modal and download action
 
 **Section sources**
-
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [src/utils/cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [src/config/api-config.ts:1-28](file://src/config/api-config.ts#L1-L28)
@@ -176,7 +168,6 @@ S-->>U : "Preview and download"
 ```
 
 **Diagram sources**
-
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 - [src/config/api-config.ts:1-28](file://src/config/api-config.ts#L1-L28)
@@ -186,7 +177,6 @@ S-->>U : "Preview and download"
 ## Detailed Component Analysis
 
 ### Authentication System
-
 - Cookie utilities manage login payload storage, retrieval, and clearing
 - Login page captures user ID, validates input, and persists a timestamped payload
 - Diagram studio checks for cookie presence on mount and redirects to login if missing
@@ -206,19 +196,16 @@ HasCookie --> |Yes| Ready["Render dashboard"]
 ```
 
 **Diagram sources**
-
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [src/utils/cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 
 **Section sources**
-
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [src/utils/cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 
 ### AI Agent Integration and Chat
-
 - Agent configuration list is fetched on mount and cached locally
 - Sessions are created per agent and user to maintain conversational context
 - Chat responses are parsed as JSON; if type is "drawio", the content is treated as XML and loaded into the editor
@@ -243,19 +230,16 @@ Parse --> |No| ShowText
 ```
 
 **Diagram sources**
-
 - [src/app/page.tsx:118-233](file://src/app/page.tsx#L118-L233)
 - [src/api/agent.ts:106-113](file://src/api/agent.ts#L106-L113)
 - [src/types/api.ts:44-50](file://src/types/api.ts#L44-L50)
 
 **Section sources**
-
 - [src/app/page.tsx:118-233](file://src/app/page.tsx#L118-L233)
 - [src/api/agent.ts:75-113](file://src/api/agent.ts#L75-L113)
 - [src/types/api.ts:13-74](file://src/types/api.ts#L13-L74)
 
 ### Real-time Diagram Editing with Draw.io
-
 - The Draw.io embed is configured with a dark UI, libraries, and spinners
 - XML content can be loaded from agent responses
 - Export triggers capture image data for preview and download
@@ -278,17 +262,14 @@ DiagramStudio --> DrawIoEmbed : "loads XML, exports"
 ```
 
 **Diagram sources**
-
 - [src/app/page.tsx:345-355](file://src/app/page.tsx#L345-L355)
 - [docs/react-drawio.md:108-168](file://docs/react-drawio.md#L108-L168)
 
 **Section sources**
-
 - [src/app/page.tsx:345-355](file://src/app/page.tsx#L345-L355)
 - [docs/react-drawio.md:1-168](file://docs/react-drawio.md#L1-L168)
 
 ### Export Capabilities
-
 - Export button initiates programmatic export via the Draw.io embed
 - Exported image is shown in a modal with a download link
 
@@ -304,21 +285,17 @@ S-->>U : "Show preview modal with download"
 ```
 
 **Diagram sources**
-
 - [src/app/page.tsx:109-115](file://src/app/page.tsx#L109-L115)
 - [src/app/page.tsx:546-596](file://src/app/page.tsx#L546-L596)
 - [docs/react-drawio.md:75-106](file://docs/react-drawio.md#L75-L106)
 
 **Section sources**
-
 - [src/app/page.tsx:109-115](file://src/app/page.tsx#L109-L115)
 - [src/app/page.tsx:546-596](file://src/app/page.tsx#L546-L596)
 - [docs/react-drawio.md:75-106](file://docs/react-drawio.md#L75-L106)
 
 ## Dependency Analysis
-
 Technology stack and external integrations:
-
 - Next.js 16.2.1 (App Router)
 - React 19.2.4 and React DOM 19.2.4
 - TypeScript 5 for type safety
@@ -339,7 +316,6 @@ API --> TY["Types"]
 ```
 
 **Diagram sources**
-
 - [package.json:11-26](file://package.json#L11-L26)
 - [src/config/api-config.ts:1-28](file://src/config/api-config.ts#L1-L28)
 - [src/api/agent.ts:1-191](file://src/api/agent.ts#L1-L191)
@@ -347,33 +323,28 @@ API --> TY["Types"]
 - [src/types/api.ts:1-74](file://src/types/api.ts#L1-L74)
 
 **Section sources**
-
 - [package.json:1-28](file://package.json#L1-L28)
 - [postcss.config.mjs:1-8](file://postcss.config.mjs#L1-L8)
 
 ## Performance Considerations
-
 - Client-side routing and static fonts minimize initial bundle overhead
 - Dark theme reduces rendering costs on low-power devices
 - Export previews avoid unnecessary re-renders by gating modal rendering
 - API calls are kept minimal and errors are surfaced early to prevent cascading failures
 
 ## Troubleshooting Guide
-
 Common issues and resolutions:
-
 - Backend connectivity errors:
-    - The agent API includes a helper to detect backend unavailability and surface actionable messages
-    - Verify the base URL and endpoint configuration
+  - The agent API includes a helper to detect backend unavailability and surface actionable messages
+  - Verify the base URL and endpoint configuration
 - Session creation failures:
-    - Ensure agent and user IDs are present before creating sessions
+  - Ensure agent and user IDs are present before creating sessions
 - Draw.io export issues:
-    - Confirm the embed is initialized and the XML is valid before exporting
+  - Confirm the embed is initialized and the XML is valid before exporting
 - Authentication problems:
-    - Check cookie presence and payload validity; clear and re-login if needed
+  - Check cookie presence and payload validity; clear and re-login if needed
 
 **Section sources**
-
 - [src/api/agent.ts:181-190](file://src/api/agent.ts#L181-L190)
 - [src/config/api-config.ts:6-7](file://src/config/api-config.ts#L6-L7)
 - [src/app/page.tsx:146-153](file://src/app/page.tsx#L146-L153)

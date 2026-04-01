@@ -14,7 +14,6 @@
 </cite>
 
 ## Table of Contents
-
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
@@ -36,9 +35,7 @@ handling for failed logins, and session timeout scenarios. Finally, it describes
 services and how the frontend handles authentication tokens and user state.
 
 ## Project Structure
-
 The authentication system spans several key areas:
-
 - Cookie utilities for storing and retrieving login state
 - Login page with form validation and submission handling
 - Main application page that enforces authentication checks
@@ -66,7 +63,6 @@ APIService --> Types
 ```
 
 **Diagram sources**
-
 - [cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [page.tsx:1-600](file://src/app/page.tsx#L1-L600)
@@ -75,7 +71,6 @@ APIService --> Types
 - [api.ts:1-74](file://src/types/api.ts#L1-L74)
 
 **Section sources**
-
 - [cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [page.tsx:1-600](file://src/app/page.tsx#L1-L600)
@@ -97,7 +92,6 @@ APIService --> Types
 - API configuration: Centralizes API base URL and endpoint constants, and provides a URL builder.
 
 **Section sources**
-
 - [cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [page.tsx:1-600](file://src/app/page.tsx#L1-L600)
@@ -106,9 +100,7 @@ APIService --> Types
 - [api-config.ts:1-28](file://src/config/api-config.ts#L1-L28)
 
 ## Architecture Overview
-
 The authentication architecture follows a cookie-based approach:
-
 - On successful login, the frontend stores a LoginPayload in a cookie.
 - The main application page checks for the presence of this cookie on initial load and redirects to the login page if
   missing.
@@ -140,7 +132,6 @@ end
 ```
 
 **Diagram sources**
-
 - [page.tsx:13-36](file://src/app/login/page.tsx#L13-L36)
 - [cookie.ts:63-85](file://src/utils/cookie.ts#L63-L85)
 - [page.tsx:38-51](file://src/app/page.tsx#L38-L51)
@@ -150,9 +141,7 @@ end
 ## Detailed Component Analysis
 
 ### Cookie Utilities
-
 The cookie utilities module centralizes cookie management for authentication:
-
 - Constants: Defines the cookie name used to store the login payload.
 - Accessors: Functions to get, set, and delete cookies with proper encoding and decoding.
 - JSON handling: A safe parser that returns null on invalid JSON, preventing crashes during cookie reads.
@@ -172,19 +161,15 @@ ParseOk --> |Yes| ReturnPayload["Return LoginPayload"]
 ```
 
 **Diagram sources**
-
 - [cookie.ts:63-67](file://src/utils/cookie.ts#L63-L67)
 - [cookie.ts:52-58](file://src/utils/cookie.ts#L52-L58)
 
 **Section sources**
-
 - [cookie.ts:8-111](file://src/utils/cookie.ts#L8-L111)
 - [api.ts:52-56](file://src/types/api.ts#L52-L56)
 
 ### Login Page Implementation
-
 The login page implements a client-side form with validation and submission handling:
-
 - State management: Tracks user ID input, loading state, and error messages.
 - Validation: Ensures the user ID is non-empty after trimming.
 - Submission: Saves the login payload to a cookie and navigates to the main page.
@@ -200,19 +185,15 @@ SaveCookie --> Navigate["Navigate to Main Page"]
 ```
 
 **Diagram sources**
-
 - [page.tsx:13-36](file://src/app/login/page.tsx#L13-L36)
 - [cookie.ts:72-78](file://src/utils/cookie.ts#L72-L78)
 
 **Section sources**
-
 - [page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [cookie.ts:63-85](file://src/utils/cookie.ts#L63-L85)
 
 ### Main Application Page Authentication
-
 The main application page enforces authentication:
-
 - Mount effect: Checks for a valid user ID from the cookie and redirects to the login page if absent.
 - User info display: Reads the login payload and formats the login timestamp for display.
 - Logout: Clears the login cookie and redirects to the login page.
@@ -234,19 +215,15 @@ end
 ```
 
 **Diagram sources**
-
 - [page.tsx:38-51](file://src/app/page.tsx#L38-L51)
 - [cookie.ts:98-110](file://src/utils/cookie.ts#L98-L110)
 
 **Section sources**
-
 - [page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 - [cookie.ts:88-110](file://src/utils/cookie.ts#L88-L110)
 
 ### API Integration and Session Management
-
 The API service layer handles backend communication:
-
 - Request building: Uses the API configuration to construct full URLs.
 - JSON handling: Parses responses and handles non-JSON responses gracefully.
 - Error handling: Throws descriptive errors for HTTP failures and non-success responses.
@@ -268,20 +245,16 @@ API-->>Main : "sessionId"
 ```
 
 **Diagram sources**
-
 - [agent.ts:87-100](file://src/api/agent.ts#L87-L100)
 - [api-config.ts:25-27](file://src/config/api-config.ts#L25-L27)
 
 **Section sources**
-
 - [agent.ts:1-191](file://src/api/agent.ts#L1-L191)
 - [api-config.ts:1-28](file://src/config/api-config.ts#L1-L28)
 - [api.ts:20-37](file://src/types/api.ts#L20-L37)
 
 ### Authentication State Management
-
 Authentication state is managed client-side via cookies:
-
 - Login payload: Stored as a JSON string in a dedicated cookie with a default expiration of seven days.
 - User ID extraction: The main page reads the cookie to determine if the user is authenticated.
 - Logout: Clears the cookie and redirects to the login page.
@@ -308,19 +281,15 @@ CookieUtils --> LoginPayload : "serializes/deserializes"
 ```
 
 **Diagram sources**
-
 - [cookie.ts:13-110](file://src/utils/cookie.ts#L13-L110)
 - [api.ts:52-56](file://src/types/api.ts#L52-L56)
 
 **Section sources**
-
 - [cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [api.ts:52-56](file://src/types/api.ts#L52-L56)
 
 ## Dependency Analysis
-
 The authentication system exhibits clear separation of concerns:
-
 - Cookie utilities depend on DOM APIs and the LoginPayload type.
 - Login page depends on cookie utilities and Next.js routing.
 - Main application page depends on cookie utilities and Next.js navigation.
@@ -340,7 +309,6 @@ Layout["app/layout.tsx"] --> Globals["app/globals.css"]
 ```
 
 **Diagram sources**
-
 - [cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [page.tsx:1-600](file://src/app/page.tsx#L1-L600)
@@ -351,7 +319,6 @@ Layout["app/layout.tsx"] --> Globals["app/globals.css"]
 - [globals.css:1-27](file://src/app/globals.css#L1-L27)
 
 **Section sources**
-
 - [cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 - [page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [page.tsx:1-600](file://src/app/page.tsx#L1-L600)
@@ -362,14 +329,12 @@ Layout["app/layout.tsx"] --> Globals["app/globals.css"]
 - [globals.css:1-27](file://src/app/globals.css#L1-L27)
 
 ## Performance Considerations
-
 - Cookie size: The login payload is small (user ID and timestamp), minimizing overhead.
 - Parsing cost: Safe JSON parsing prevents exceptions and avoids repeated parsing failures.
 - Navigation: Client-side navigation via Next.js reduces server round-trips for route changes.
 - API caching: Consider caching agent lists and session IDs to reduce network requests.
 
 ## Troubleshooting Guide
-
 Common issues and resolutions:
 
 - Login fails silently: Verify cookie setting and redirection logic in the login page. Ensure the cookie utility
@@ -390,7 +355,6 @@ Practical examples:
 - Session timeout scenario: If the cookie is cleared or expired, the main page redirects to the login route upon mount.
 
 **Section sources**
-
 - [page.tsx:13-36](file://src/app/login/page.tsx#L13-L36)
 - [page.tsx:38-51](file://src/app/page.tsx#L38-L51)
 - [agent.ts:52-58](file://src/api/agent.ts#L52-L58)
