@@ -41,6 +41,14 @@ export interface ChatResponse {
     content: string;
 }
 
+// Agent Response JSON (parsed from ChatResponse.content)
+export type AgentResponseType = "user" | "drawio";
+
+export interface AgentResponse {
+    type: AgentResponseType;
+    content: string;
+}
+
 // Login Payload (stored in cookie)
 export interface LoginPayload {
     user: string;
@@ -55,6 +63,8 @@ export interface ChatMessage {
     timestamp: Date;
     agentId?: string;
     sessionId?: string;
+    /** Mirrors AgentResponse.type; "drawio" messages rendered diagram in DrawIo panel */
+    type?: AgentResponseType;
 }
 
 // Response Codes

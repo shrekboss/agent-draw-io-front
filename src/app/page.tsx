@@ -5,7 +5,7 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 import {chat, createSession, isBackendUnavailableError, queryAgentConfigList} from "@/api/agent";
 import {clearLogin, formatTime, getCurrentUserId, getLoginPayload} from "@/utils/cookie";
-import {AiAgentConfig, ChatMessage} from "@/types/api";
+import {AgentResponse, AiAgentConfig, ChatMessage} from "@/types/api";
 import {API_BASE_URL} from "@/config/api-config";
 
 export default function DiagramStudioPage() {
@@ -33,6 +33,8 @@ export default function DiagramStudioPage() {
   const [diagramXml, setDiagramXml] = useState<string>("");
   const drawioRef = useRef<DrawIoEmbedRef>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const drawioReadyRef = useRef(false);
+  const pendingXmlRef = useRef<string | null>(null);
 
   // Check login status on mount
   useEffect(() => {
@@ -160,26 +162,78 @@ export default function DiagramStudioPage() {
         message: userMessage.content,
       });
 
-      // Check if response contains XML diagram
-      const xmlMatch = response.match(/<mxGraphModel[\s\S]*?<\/mxGraphModel>/);
-      if (xmlMatch) {
-        setDiagramXml(xmlMatch[0]);
-        // Load diagram into DrawIo
-        if (drawioRef.current) {
-          drawioRef.current.load({xml: xmlMatch[0]});
+      // Parse response from agent
+      // Expected JSON format: { type: "user" | "drawio", content: "..." }
+      // Fallback: raw XML (treat as drawio) or plain text
+      let parsed: AgentResponse | null = null;
+      let isRawXml = false;
+
+      // Check if response is raw XML (starts with <mxfile or <mxGraphModel)
+      const trimmedResponse = response.trim();
+      if (trimmedResponse.startsWith("<mxfile") || trimmedResponse.startsWith("<mxGraphModel")) {
+        isRawXml = true;
+        console.log("[Chat] Detected raw XML response");
+      } else {
+        // Try to parse as JSON
+        try {
+          parsed = JSON.parse(response) as AgentResponse;
+          console.log("[Chat] Parsed JSON:", parsed);
+        } catch (e) {
+          console.log("[Chat] Not JSON, treating as plain text");
         }
       }
 
-      const agentMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "agent",
-        content: response,
-        timestamp: new Date(),
-        agentId: selectedAgentId,
-        sessionId: currentSessionId,
-      };
-
-      setMessages(prev => [...prev, agentMessage]);
+      if (isRawXml || parsed?.type === "drawio") {
+        // Render XML in DrawIo panel
+        // Extract mxGraphModel from mxfile wrapper if present
+        let xml = isRawXml ? response : parsed!.content;
+        const mxGraphModelMatch = xml.match(/<mxGraphModel[\s\S]*?<\/mxGraphModel>/);
+        if (mxGraphModelMatch) {
+          xml = mxGraphModelMatch[0];
+        }
+        console.log("[Chat] Loading XML into DrawIo, length:", xml.length);
+        setDiagramXml(xml);
+        if (drawioReadyRef.current && drawioRef.current) {
+          console.log("[Chat] DrawIo ready, loading XML now");
+          drawioRef.current.load({xml});
+        } else {
+          console.log("[Chat] DrawIo not ready, storing XML for later");
+          pendingXmlRef.current = xml;
+        }
+        const agentMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "agent",
+          content: isRawXml ? response : parsed!.content,
+          timestamp: new Date(),
+          agentId: selectedAgentId,
+          sessionId: currentSessionId,
+          type: "drawio",
+        };
+        setMessages(prev => [...prev, agentMessage]);
+      } else if (parsed?.type === "user") {
+        // AI is asking the user to supply more information
+        const agentMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "agent",
+          content: parsed.content,
+          timestamp: new Date(),
+          agentId: selectedAgentId,
+          sessionId: currentSessionId,
+          type: "user",
+        };
+        setMessages(prev => [...prev, agentMessage]);
+      } else {
+        // Fallback: plain-text response
+        const agentMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "agent",
+          content: response,
+          timestamp: new Date(),
+          agentId: selectedAgentId,
+          sessionId: currentSessionId,
+        };
+        setMessages(prev => [...prev, agentMessage]);
+      }
       setStatus({text: "Message sent successfully", type: "info"});
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -204,11 +258,31 @@ export default function DiagramStudioPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSendMessage();
     }
   };
+
+  // Preset prompts shown when the chat is empty
+  const presetPrompts = [
+    {
+      label: "H5 Login Flow",
+      detail: "请帮我绘制一个 H5 端用户登录流程图，包含：输入账号密码、表单校验、调用登录接口、token 存储、跳转首页，以及异常处理（账号不存在、密码错误、网络超时）。"
+    },
+    {
+      label: "E-commerce Shopping",
+      detail: "请帮我绘制一个电商购物流程图，包含：商品浏览、加入购物车、确认订单、选择支付方式、支付成功/失败、订单状态更新、物流跟踪。"
+    },
+    {
+      label: "Microservices Arch",
+      detail: "请帮我绘制一个微服务架构图，包含：API 网关、用户服务、商品服务、订单服务、支付服务，以及各服务之间的调用关系和 MQ 消息队列。"
+    },
+    {
+      label: "CI/CD Pipeline",
+      detail: "请帮我绘制一个 CI/CD 流水线流程图，包含：代码提交、触发构建、单元测试、代码扫描、Docker 镜像构建、推送镜像仓库、部署到测试环境、手动审批、部署到生产环境。"
+    },
+  ];
 
   // Get selected agent name
   const selectedAgent = agents.find(a => a.agentId === selectedAgentId);
@@ -307,12 +381,21 @@ export default function DiagramStudioPage() {
           <div className="flex-1 min-h-0 bg-[#0d0d0d]">
             <DrawIoEmbed
                 ref={drawioRef}
-                xml={diagramXml || undefined}
                 urlParameters={{
                   ui: "dark",
                   spin: true,
                   libraries: true,
                   saveAndExit: false,
+                }}
+                onLoad={() => {
+                  console.log("[DrawIo] Ready");
+                  drawioReadyRef.current = true;
+                  // Load any pending XML that arrived before DrawIo was ready
+                  if (pendingXmlRef.current && drawioRef.current) {
+                    console.log("[DrawIo] Loading pending XML");
+                    drawioRef.current.load({xml: pendingXmlRef.current});
+                    pendingXmlRef.current = null;
+                  }
                 }}
                 onExport={(data) => setImgData(data.data)}
             />
@@ -396,7 +479,18 @@ export default function DiagramStudioPage() {
                                   : "bg-[#1a1a1a] text-gray-200 rounded-bl-md border border-[#252525]"
                           }`}
                       >
-                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                        {message.type === "drawio" ? (
+                            <span className="flex items-center gap-2 text-emerald-400">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor"
+                                   viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                              </svg>
+                              Diagram rendered in the editor
+                            </span>
+                        ) : (
+                            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                        )}
                       </div>
                       <div
                           className={`flex gap-2 text-[10px] mt-1 px-1 text-gray-500 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -437,6 +531,20 @@ export default function DiagramStudioPage() {
 
             {/* Input Area */}
             <div className="p-3 border-t border-[#1f1f1f] bg-[#0d0d0d]">
+              {/* Preset Prompt Chips — shown only when no messages yet */}
+              {messages.length === 0 && selectedAgentId && (
+                  <div className="flex flex-wrap gap-1.5 mb-2.5">
+                    {presetPrompts.map((p) => (
+                        <button
+                            key={p.label}
+                            onClick={() => setInputValue(p.detail)}
+                            className="px-2.5 py-1 text-xs rounded-lg bg-[#1a1a1a] border border-[#252525] text-gray-400 hover:text-violet-300 hover:border-violet-500/40 hover:bg-violet-500/10 transition-all duration-150 text-left"
+                        >
+                          {p.label}
+                        </button>
+                    ))}
+                  </div>
+              )}
               <div className="flex gap-2 items-end">
                 <div className="flex-1 relative">
                 <textarea
@@ -445,13 +553,13 @@ export default function DiagramStudioPage() {
                     onKeyDown={handleKeyDown}
                     placeholder={selectedAgentId ? "Type a message..." : "Select an agent first..."}
                     disabled={!selectedAgentId || isSending}
-                    rows={1}
+                    rows={3}
                     className="w-full px-4 py-3 text-sm bg-[#1a1a1a] border border-[#252525] rounded-xl text-white placeholder-gray-500 resize-none focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all disabled:opacity-50"
-                    style={{minHeight: "44px", maxHeight: "120px"}}
+                    style={{minHeight: "80px", maxHeight: "200px"}}
                     onInput={(e) => {
                       const target = e.target as HTMLTextAreaElement;
                       target.style.height = "auto";
-                      target.style.height = Math.min(target.scrollHeight, 120) + "px";
+                      target.style.height = Math.min(target.scrollHeight, 200) + "px";
                     }}
                 />
                 </div>
@@ -474,8 +582,9 @@ export default function DiagramStudioPage() {
                 </button>
               </div>
               <p className="text-[10px] text-gray-600 mt-2 text-center">
-                Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-gray-500">Enter</kbd> to send · <kbd
-                  className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-gray-500">Shift + Enter</kbd> for new line
+                Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-gray-500">Ctrl + Enter</kbd> to send
+                · <kbd
+                  className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-gray-500">Enter</kbd> for new line
               </p>
             </div>
         </div>
