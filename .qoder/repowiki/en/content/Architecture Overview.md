@@ -18,7 +18,6 @@
 </cite>
 
 ## Table of Contents
-
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
@@ -34,7 +33,6 @@
 This document describes the architecture of the AI Agent Scaffold Frontend built with Next.js App Router. The
 application is a diagramming and AI-assisted chat platform that integrates a Draw.io editor with backend AI services. It
 follows a component-based structure with a clear separation of concerns:
-
 - UI components handle presentation and user interactions
 - Services encapsulate API communication
 - Utilities provide helper functions for cookies and formatting
@@ -44,9 +42,7 @@ External dependencies include react-drawio for the embedded diagram editor and T
 boundary is defined by the frontend application and its integration points with backend AI services.
 
 ## Project Structure
-
 The project follows Next.js App Router conventions with a strict file-based routing model. Key areas:
-
 - src/app: Page components and shared layout
 - src/api: Service layer for backend communication
 - src/config: Centralized API configuration
@@ -88,7 +84,6 @@ D1 -.-> P
 ```
 
 **Diagram sources**
-
 - [src/app/layout.tsx:1-34](file://src/app/layout.tsx#L1-L34)
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
@@ -100,7 +95,6 @@ D1 -.-> P
 - [docs/react-drawio.md:1-168](file://docs/react-drawio.md#L1-L168)
 
 **Section sources**
-
 - [README.md:1-37](file://README.md#L1-L37)
 - [package.json:1-28](file://package.json#L1-L28)
 - [next.config.ts:1-8](file://next.config.ts#L1-L8)
@@ -117,7 +111,6 @@ D1 -.-> P
 - Login Page: Minimal authentication flow that sets a login cookie and redirects to the main page.
 
 Design patterns used:
-
 - Service Layer Pattern: API calls are isolated in dedicated modules.
 - MVC-like Separation: Components manage UI state, services handle data communication, utilities provide helper
   functions.
@@ -125,7 +118,6 @@ Design patterns used:
 - Reactive UI with Hooks: React hooks manage local state, effects, and side effects.
 
 **Section sources**
-
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 - [src/api/agent.ts:1-191](file://src/api/agent.ts#L1-L191)
 - [src/config/api-config.ts:1-28](file://src/config/api-config.ts#L1-L28)
@@ -134,9 +126,7 @@ Design patterns used:
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 
 ## Architecture Overview
-
 The system is structured around a single-page application with two primary routes:
-
 - /login: Authentication page that writes a login cookie and navigates to the main page.
 - /: The Diagram Studio page that integrates the Draw.io editor, agent selection, and chat UI.
 
@@ -166,7 +156,6 @@ SVC --> BACKEND
 ```
 
 **Diagram sources**
-
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [src/api/agent.ts:1-191](file://src/api/agent.ts#L1-L191)
@@ -178,9 +167,7 @@ SVC --> BACKEND
 ## Detailed Component Analysis
 
 ### Diagram Studio Page (Main UI)
-
 Responsibilities:
-
 - Authentication guard: Redirects unauthenticated users to /login.
 - Agent discovery: Loads agent configurations from the backend and persists last selection.
 - Session lifecycle: Creates sessions when needed and maintains session IDs.
@@ -189,13 +176,11 @@ Responsibilities:
 - Status reporting: Displays informational and error messages.
 
 State management patterns:
-
 - Local React state for UI state (agents, selected agent, messages, session, UI toggles).
 - Persistent selections via localStorage.
 - Cookies for login state.
 
 Data flow:
-
 - On mount, checks cookie for user identity; otherwise redirects to login.
 - Loads agent list and restores previous selection.
 - On message send, conditionally creates a session, posts to chat endpoint, parses response, and updates messages and
@@ -229,26 +214,21 @@ Page->>Page : Update status and UI
 ```
 
 **Diagram sources**
-
 - [src/app/page.tsx:118-233](file://src/app/page.tsx#L118-L233)
 - [src/api/agent.ts:87-113](file://src/api/agent.ts#L87-L113)
 - [src/config/api-config.ts:24-27](file://src/config/api-config.ts#L24-L27)
 
 **Section sources**
-
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 
 ### API Service Layer
-
 Responsibilities:
-
 - Centralized HTTP requests with JSON parsing and error handling.
 - Non-streaming chat and streaming chat support.
 - Response code validation and error propagation.
 - Backend availability detection.
 
 Key functions:
-
 - requestJson: Builds URL, performs fetch, parses JSON, and throws on non-OK responses.
 - ensureSuccess: Validates response code and extracts data.
 - queryAgentConfigList: Fetches agent configurations.
@@ -274,37 +254,29 @@ ReturnData --> End
 ```
 
 **Diagram sources**
-
 - [src/api/agent.ts:20-58](file://src/api/agent.ts#L20-L58)
 - [src/api/agent.ts:63-69](file://src/api/agent.ts#L63-L69)
 - [src/api/agent.ts:75-113](file://src/api/agent.ts#L75-L113)
 
 **Section sources**
-
 - [src/api/agent.ts:1-191](file://src/api/agent.ts#L1-L191)
 
 ### Configuration Management
-
 Responsibilities:
-
 - Define API base URL from environment.
 - Define endpoint constants.
 - Provide a URL builder function.
 
 Patterns:
-
 - Environment-driven configuration for base URL.
 - Immutable endpoint constants.
 - Single source of truth for API endpoints.
 
 **Section sources**
-
 - [src/config/api-config.ts:1-28](file://src/config/api-config.ts#L1-L28)
 
 ### Cookie Utilities
-
 Responsibilities:
-
 - Cookie CRUD operations.
 - Safe JSON parsing.
 - Login payload serialization and deserialization.
@@ -312,16 +284,13 @@ Responsibilities:
 - Timestamp formatting.
 
 Integration:
-
 - Used by the Diagram Studio page to enforce authentication.
 - Used by the Login page to persist user identity.
 
 **Section sources**
-
 - [src/utils/cookie.ts:1-111](file://src/utils/cookie.ts#L1-L111)
 
 ### Type System
-
 Responsibilities:
 
 - Define response wrapper, agent config, session, chat request/response, agent response variants, login payload, and
@@ -329,53 +298,41 @@ Responsibilities:
 - Define response code constants.
 
 Benefits:
-
 - Strong typing across services and UI.
 - Consistent contract with backend.
 
 **Section sources**
-
 - [src/types/api.ts:1-74](file://src/types/api.ts#L1-L74)
 
 ### Login Page
-
 Responsibilities:
-
 - Minimal form to capture user ID.
 - Persist login payload to cookie.
 - Navigate to main page.
 
 Flow:
-
 - On submit, validates input, saves payload, and redirects.
 
 **Section sources**
-
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 
 ### Draw.io Integration
-
 Responsibilities:
-
 - Embed diagrams.net editor.
 - Load XML diagrams from agent responses.
 - Export diagrams and preview images.
 - Configure editor UI (dark mode, libraries, etc.).
 
 Integration points:
-
 - React ref for programmatic actions (load, exportDiagram).
 - onExport callback to capture exported image data.
 
 **Section sources**
-
 - [src/app/page.tsx:344-356](file://src/app/page.tsx#L344-L356)
 - [docs/react-drawio.md:1-168](file://docs/react-drawio.md#L1-L168)
 
 ## Dependency Analysis
-
 External dependencies:
-
 - next: Framework runtime and App Router.
 - react, react-dom: UI framework.
 - react-drawio: Embedded diagrams.net editor.
@@ -383,7 +340,6 @@ External dependencies:
 - @types/*: TypeScript definitions.
 
 Internal dependencies:
-
 - Diagram Studio Page depends on API service, cookie utilities, types, and configuration.
 - API service depends on configuration and types.
 - Login page depends on cookie utilities.
@@ -400,7 +356,6 @@ A --> T
 ```
 
 **Diagram sources**
-
 - [src/app/page.tsx:1-600](file://src/app/page.tsx#L1-L600)
 - [src/app/login/page.tsx:1-173](file://src/app/login/page.tsx#L1-L173)
 - [src/api/agent.ts:1-191](file://src/api/agent.ts#L1-L191)
@@ -409,11 +364,9 @@ A --> T
 - [src/types/api.ts:1-74](file://src/types/api.ts#L1-L74)
 
 **Section sources**
-
 - [package.json:11-26](file://package.json#L11-L26)
 
 ## Performance Considerations
-
 - Minimize re-renders: Use React state grouping and memoization where appropriate.
 - Debounce or throttle input handlers to reduce unnecessary updates.
 - Lazy-load heavy assets and defer non-critical operations.
@@ -421,7 +374,6 @@ A --> T
 - Use streaming for long-running operations when available to improve perceived performance.
 
 ## Troubleshooting Guide
-
 Common issues and resolutions:
 
 - Backend Unavailable: The API service detects network errors and marks status accordingly. Verify API base URL and CORS
@@ -432,7 +384,6 @@ Common issues and resolutions:
 - Draw.io Export Issues: Ensure the editor is initialized and the ref is available before exporting.
 
 **Section sources**
-
 - [src/api/agent.ts:181-190](file://src/api/agent.ts#L181-L190)
 - [src/app/page.tsx:144-233](file://src/app/page.tsx#L144-L233)
 - [src/utils/cookie.ts:63-85](file://src/utils/cookie.ts#L63-L85)

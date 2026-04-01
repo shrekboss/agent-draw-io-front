@@ -5,8 +5,9 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 import {chat, createSession, isBackendUnavailableError, queryAgentConfigList} from "@/api/agent";
 import {clearLogin, formatTime, getCurrentUserId, getLoginPayload} from "@/utils/cookie";
-import {AgentResponse, AiAgentConfig, ChatMessage} from "@/types/api";
+import {AgentResponse, AiAgentConfig, ChatMessage, ConversationBookmark} from "@/types/api";
 import {API_BASE_URL} from "@/config/api-config";
+import {createBookmark, deleteBookmark, getBookmarkById, getBookmarks, saveBookmark} from "@/utils/bookmark";
 
 export default function DiagramStudioPage() {
   const router = useRouter();
@@ -36,6 +37,11 @@ export default function DiagramStudioPage() {
   const drawioReadyRef = useRef(false);
   const pendingXmlRef = useRef<string | null>(null);
 
+  // Bookmark state
+  const [bookmarks, setBookmarks] = useState<ConversationBookmark[]>([]);
+  const [currentBookmarkId, setCurrentBookmarkId] = useState<string | null>(null);
+  const [bookmarkSidebarOpen, setBookmarkSidebarOpen] = useState(true);
+
   // Check login status on mount
   useEffect(() => {
     setIsClient(true);
@@ -51,6 +57,22 @@ export default function DiagramStudioPage() {
       setLoginTime(formatTime(payload.ts));
     }
   }, [router]);
+
+  // Load bookmarks on mount
+  useEffect(() => {
+    if (userId) {
+      const loadedBookmarks = getBookmarks().filter(b => b.userId === userId);
+      setBookmarks(loadedBookmarks);
+    }
+  }, [userId]);
+
+  // Reload bookmarks from localStorage
+  const reloadBookmarks = useCallback(() => {
+    if (userId) {
+      const loadedBookmarks = getBookmarks().filter(b => b.userId === userId);
+      setBookmarks(loadedBookmarks);
+    }
+  }, [userId]);
 
   // Load agents on mount
   const loadAgents = useCallback(async () => {
@@ -99,6 +121,52 @@ export default function DiagramStudioPage() {
     }
     // Reset session when agent changes
     setSessionId("");
+  };
+
+  // Start a new conversation (clear current state)
+  const handleNewConversation = () => {
+    setMessages([]);
+    setDiagramXml("");
+    setSessionId("");
+    setCurrentBookmarkId(null);
+    setInputValue("");
+    setStatus(null);
+    // Clear draw.io canvas
+    if (drawioReadyRef.current && drawioRef.current) {
+      drawioRef.current.load({xml: ""});
+    }
+  };
+
+  // Switch to a bookmark
+  const handleSelectBookmark = (bookmark: ConversationBookmark) => {
+    setCurrentBookmarkId(bookmark.id);
+    setMessages(bookmark.messages);
+    setDiagramXml(bookmark.diagramXml);
+    setSessionId(bookmark.sessionId);
+    setSelectedAgentId(bookmark.agentId);
+
+    // Load diagram XML into draw.io
+    if (bookmark.diagramXml && drawioReadyRef.current && drawioRef.current) {
+      drawioRef.current.load({xml: bookmark.diagramXml});
+    } else if (bookmark.diagramXml) {
+      pendingXmlRef.current = bookmark.diagramXml;
+    }
+
+    setStatus({text: `Loaded conversation: ${bookmark.title}`, type: "info"});
+  };
+
+  // Delete a bookmark
+  const handleDeleteBookmark = (bookmarkId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the bookmark selection
+    deleteBookmark(bookmarkId);
+    reloadBookmarks();
+
+    // If we're deleting the current bookmark, clear the state
+    if (currentBookmarkId === bookmarkId) {
+      handleNewConversation();
+    }
+
+    setStatus({text: "Conversation deleted", type: "info"});
   };
 
   // Handle logout
@@ -209,7 +277,53 @@ export default function DiagramStudioPage() {
           sessionId: currentSessionId,
           type: "drawio",
         };
-        setMessages(prev => [...prev, agentMessage]);
+
+        // Update messages and save to bookmark
+        setMessages(prev => {
+          const newMessages = [...prev, agentMessage];
+
+          // Save to bookmark after draw.io render success
+          const selectedAgent = agents.find(a => a.agentId === selectedAgentId);
+          if (selectedAgent && userId) {
+            if (currentBookmarkId) {
+              // Update existing bookmark
+              const existingBookmark = getBookmarkById(currentBookmarkId);
+              if (existingBookmark) {
+                const updatedBookmark: ConversationBookmark = {
+                  ...existingBookmark,
+                  messages: newMessages,
+                  diagramXml: xml,
+                  updatedAt: Date.now(),
+                };
+                const firstUserMessage = newMessages.find((m: ChatMessage) => m.role === "user");
+                if (firstUserMessage) {
+                  updatedBookmark.title = firstUserMessage.content.substring(0, 50) +
+                      (firstUserMessage.content.length > 50 ? "..." : "");
+                }
+                saveBookmark(updatedBookmark);
+                console.log("[Bookmark] Updated bookmark:", currentBookmarkId);
+              }
+            } else {
+              // Create new bookmark
+              const newBookmark = createBookmark({
+                agentId: selectedAgentId,
+                agentName: selectedAgent.agentName,
+                sessionId: currentSessionId,
+                userId: userId,
+                messages: newMessages,
+                diagramXml: xml,
+              });
+              saveBookmark(newBookmark);
+              setCurrentBookmarkId(newBookmark.id);
+              console.log("[Bookmark] Created new bookmark:", newBookmark.id, newBookmark.title);
+            }
+            // Reload bookmarks list
+            const loadedBookmarks = getBookmarks().filter(b => b.userId === userId);
+            setBookmarks(loadedBookmarks);
+          }
+
+          return newMessages;
+        });
       } else if (parsed?.type === "user") {
         // AI is asking the user to supply more information
         const agentMessage: ChatMessage = {
@@ -350,6 +464,22 @@ export default function DiagramStudioPage() {
             </span>
             </button>
 
+            {/* Bookmark Sidebar Toggle */}
+            <button
+                onClick={() => setBookmarkSidebarOpen(!bookmarkSidebarOpen)}
+                className={`p-2.5 rounded-lg transition-all duration-200 ${
+                    bookmarkSidebarOpen
+                        ? "bg-violet-600/20 text-violet-400 hover:bg-violet-600/30"
+                        : "bg-[#1a1a1a] text-gray-400 hover:bg-[#252525] hover:text-white"
+                }`}
+                title={bookmarkSidebarOpen ? "Hide Conversations" : "Show Conversations"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+              </svg>
+            </button>
+
             {/* Chat Toggle */}
             <button
                 onClick={() => setChatOpen(!chatOpen)}
@@ -376,7 +506,122 @@ export default function DiagramStudioPage() {
           </div>
         </header>
 
-        <main className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex overflow-hidden relative">
+          {/* Bookmark Sidebar */}
+          <div
+              className={`flex flex-col bg-[#111111] border-r border-[#1f1f1f] transition-all duration-300 ease-in-out ${
+                  bookmarkSidebarOpen ? "w-[280px]" : "w-0"
+              } overflow-hidden`}
+          >
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#1f1f1f] bg-[#0d0d0d]">
+              <div className="flex items-center gap-2.5">
+                <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                </svg>
+                <h2 className="text-sm font-semibold text-white">Conversations</h2>
+              </div>
+              <button
+                  onClick={() => setBookmarkSidebarOpen(false)}
+                  className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-[#1a1a1a] transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* New Conversation Button */}
+            <div className="p-3 border-b border-[#1f1f1f]">
+              <button
+                  onClick={handleNewConversation}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-indigo-600 rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-all duration-200 shadow-lg shadow-violet-500/20 flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+                </svg>
+                New Conversation
+              </button>
+            </div>
+
+            {/* Bookmark List */}
+            <div
+                className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-[#2a2a2a] scrollbar-track-transparent">
+              {bookmarks.length === 0 ? (
+                  <div className="text-center text-gray-500 text-sm py-8 px-4">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor"
+                         viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                    </svg>
+                    <p>No saved conversations</p>
+                    <p className="mt-1 text-xs">Start chatting to save your first conversation</p>
+                  </div>
+              ) : (
+                  bookmarks.map((bookmark) => (
+                      <div
+                          key={bookmark.id}
+                          onClick={() => handleSelectBookmark(bookmark)}
+                          className={`group relative p-3 rounded-lg cursor-pointer transition-all duration-150 ${
+                              currentBookmarkId === bookmark.id
+                                  ? "bg-violet-600/20 border border-violet-500/40"
+                                  : "bg-[#1a1a1a] border border-[#252525] hover:bg-[#222222] hover:border-[#333333]"
+                          }`}
+                      >
+                        {/* Bookmark Title */}
+                        <div className="flex items-start gap-2 pr-6">
+                          <svg className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                              currentBookmarkId === bookmark.id ? "text-violet-400" : "text-gray-500"
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium truncate ${
+                                currentBookmarkId === bookmark.id ? "text-white" : "text-gray-300"
+                            }`}>
+                              {bookmark.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-500">{bookmark.agentName}</span>
+                              <span className="text-[10px] text-gray-600">
+                                {new Date(bookmark.updatedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Delete Button */}
+                        <button
+                            onClick={(e) => handleDeleteBookmark(bookmark.id, e)}
+                            className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
+                            title="Delete conversation"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                          </svg>
+                        </button>
+                      </div>
+                  ))
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar Toggle (when closed) */}
+          {!bookmarkSidebarOpen && (
+              <button
+                  onClick={() => setBookmarkSidebarOpen(true)}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-[#111111] border border-[#1f1f1f] rounded-r-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors shadow-lg"
+                  title="Show Conversations"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                </svg>
+              </button>
+          )}
+
           {/* DrawIo Editor Area */}
           <div className="flex-1 min-h-0 bg-[#0d0d0d]">
             <DrawIoEmbed

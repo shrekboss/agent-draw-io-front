@@ -71,3 +71,41 @@ export interface ChatMessage {
 export const ResponseCode = {
     SUCCESS: "0000",
 } as const;
+
+// Conversation Bookmark (for localStorage persistence)
+export interface ConversationBookmark {
+    id: string;
+    title: string;
+    agentId: string;
+    agentName: string;
+    sessionId: string;
+    userId: string;
+    messages: ChatMessage[];
+    diagramXml: string;
+    createdAt: number;
+    updatedAt: number;
+}
+
+// Serialized version for localStorage (Date as string)
+export interface SerializedChatMessage {
+    id: string;
+    role: "user" | "agent";
+    content: string;
+    timestamp: string;
+    agentId?: string;
+    sessionId?: string;
+    type?: AgentResponseType;
+}
+
+export interface SerializedConversationBookmark {
+    id: string;
+    title: string;
+    agentId: string;
+    agentName: string;
+    sessionId: string;
+    userId: string;
+    messages: SerializedChatMessage[];
+    diagramXml: string;
+    createdAt: number;
+    updatedAt: number;
+}
