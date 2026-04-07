@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  agent-draw-io-front:
+    container_name: agent-draw-io-front
+    image: crayzer/agent-draw-io-front:1.0
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Also set it as runtime environment variable (for server-side rendering if applicable)
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://42.193.143.132:8091}
+      - NODE_ENV=production
