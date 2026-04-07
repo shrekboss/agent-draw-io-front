@@ -5275,7 +5275,7 @@
   },
   "wiki_repo": {
     "id": "8b7ed026-4515-4213-9c5a-b630c5d816b2",
-    "name": "ai-agent-scaffold-io-front",
+    "name": "agent-draw-io-front",
     "progress_status": "completed",
     "wiki_present_status": "COMPLETED",
     "optimized_catalog": "\".\\n├── docs/\\n│   └── react-drawio.md\\n├── public/\\n├── src/\\n│   ├── api/\\n│   │   └── agent.ts\\n│   ├── app/\\n│   │   ├── drawio/\\n│   │   ├── login/\\n│   │   │   └── page.tsx\\n│   │   ├── globals.css\\n│   │   ├── layout.tsx\\n│   │   └── page.tsx\\n│   ├── config/\\n│   │   └── api-config.ts\\n│   ├── types/\\n│   │   └── api.ts\\n│   └── utils/\\n│       └── cookie.ts\\n├── .gitignore\\n├── AGENTS.md\\n├── CLAUDE.md\\n├── README.md\\n├── eslint.config.mjs\\n├── next.config.ts\\n├── package-lock.json\\n├── package.json\\n├── postcss.config.mjs\\n└── tsconfig.json\\n\"",
